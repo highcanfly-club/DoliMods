@@ -108,7 +108,9 @@ function getTokenFromServiceAccount($service_account_name, $key_file_location, $
 
 	$applicationname = "Dolibarr";
 
+	dol_syslog("getTokenFromServiceAccount Create a new Google_Client: client = new Google_Client()", LOG_DEBUG);
 	$client = new Google_Client();
+	dol_syslog("getTokenFromServiceAccount client = new setApplicationName(".$applicationname.")", LOG_DEBUG);
 	$client->setApplicationName($applicationname);	// Set prefix of User Agent. User agent is set by PHP API in method Client->execute() of PHP Google Lib.
 	//$client->setClassConfig('Google_Cache_File', 'directory', $conf->google->dir_temp);		// Force dir if cache used is Google_Cache_File
 
@@ -144,14 +146,14 @@ function getTokenFromServiceAccount($service_account_name, $key_file_location, $
 				'expires_in' => ($tokenobj->getEndOfLife() - time()),
 				'created' => ($tokenobj->getEndOfLife() - 3600)
 			);
-			dol_syslog("Get service token from database and save into session. google_web_token=".$_SESSION['google_web_token_'.$conf->entity]);
+			dol_syslog("Get service token from database and save into session. google_web_token=".var_export($_SESSION['google_web_token_'.$conf->entity], true));
 			$client->setAccessToken($_SESSION['google_web_token_'.$conf->entity]);
 		}
 
 		if (empty($_SESSION['google_web_token_'.$conf->entity])) {
 			return 'GoogleWebTokenNotDefinedDoALoginInitFirst';
 		} else {
-			dol_syslog("getTokenFromServiceAccount set current token to ".(is_array($_SESSION['google_web_token_'.$conf->entity])?implode(",",$_SESSION['google_web_token_'.$conf->entity]):$_SESSION['google_web_token_'.$conf->entity]), LOG_DEBUG);
+			dol_syslog("getTokenFromServiceAccount set current token to ".(is_array($_SESSION['google_web_token_'.$conf->entity]) ? implode(",",$_SESSION['google_web_token_'.$conf->entity]):$_SESSION['google_web_token_'.$conf->entity]), LOG_DEBUG);
 			$client->setAccessToken($_SESSION['google_web_token_'.$conf->entity]);
 		}
 
@@ -164,7 +166,7 @@ function getTokenFromServiceAccount($service_account_name, $key_file_location, $
 					dol_syslog("getTokenFromServiceAccount token seems to be expired, we refresh it with the refresh token = ".$refreshtoken);
 					$client->refreshToken($refreshtoken);
 					$_SESSION['google_web_token_'.$conf->entity]= $client->getAccessToken();
-					dol_syslog("getTokenFromServiceAccount new token in session is now ".(is_array($_SESSION['google_web_token_'.$conf->entity])?implode(",",$_SESSION['google_web_token_'.$conf->entity]):$_SESSION['google_web_token_'.$conf->entity]), LOG_DEBUG);
+					dol_syslog("getTokenFromServiceAccount new token in session is now ".(is_array($_SESSION['google_web_token_'.$conf->entity]) ? implode(",",$_SESSION['google_web_token_'.$conf->entity]):$_SESSION['google_web_token_'.$conf->entity]), LOG_DEBUG);
 				} else dol_syslog("getTokenFromServiceAccount token not expired", LOG_DEBUG);
 			} catch (Exception $e) {
 				return $e->getMessage();
@@ -184,35 +186,25 @@ function getTokenFromServiceAccount($service_account_name, $key_file_location, $
 		  the service account
 		 ************************************************/
 		if (empty($force_do_not_use_session) && isset($_SESSION['google_service_token_'.$conf->entity])) {
-			dol_syslog("Get service token from session. service_token=".$_SESSION['google_service_token_'.$conf->entity]);
+			dol_syslog("Get service token from session with client->setAccessToken(".$_SESSION['google_service_token_'.$conf->entity].")", LOG_DEBUG);
 			$client->setAccessToken($_SESSION['google_service_token_'.$conf->entity]);
 		}
 
-		dol_syslog("getTokenFromServiceAccount service_account_name=".$service_account_name." key_file_location=".$key_file_location." force_do_not_use_session=".$force_do_not_use_session, LOG_DEBUG);
-
-		// API v1
-		/*
-		$key = file_get_contents($key_file_location);
-		$cred = new Google_Auth_AssertionCredentials(
-			$service_account_name,
-			array('https://www.googleapis.com/auth/calendar','https://www.googleapis.com/auth/calendar.readonly'),
-			$key,
-			'notasecret',
-			'http://oauth.net/grant_type/jwt/1.0/bearer',
-			$user_to_impersonate
-		);
-		$client->setAssertionCredentials($cred);
-		*/
+		//dol_syslog("getTokenFromServiceAccount service_account_name=".$service_account_name." key_file_location=".$key_file_location." force_do_not_use_session=".$force_do_not_use_session, LOG_DEBUG);
 
 		// API v2
 		if ($user_to_impersonate) {
+			dol_syslog("getTokenFromServiceAccount client->setSubject(".$user_to_impersonate.")", LOG_DEBUG);
 			$client->setSubject($user_to_impersonate);
 		}
 
 		try {
+			dol_syslog("getTokenFromServiceAccount client->setAuthConfig(".$key_file_location.")", LOG_DEBUG);
 			$client->setAuthConfig($key_file_location);
+			dol_syslog("getTokenFromServiceAccount client->setAccessType('offline')", LOG_DEBUG);
 			$client->setAccessType('offline');
 			$scopes = array('https://www.googleapis.com/auth/calendar','https://www.googleapis.com/auth/calendar.events');
+			dol_syslog("getTokenFromServiceAccount client->setScopes(array(".join(',', $scopes)."))", LOG_DEBUG);
 			$client->setScopes($scopes);
 		} catch (Exception $e) {
 			dol_syslog("getTokenFromServiceAccount Error ".$e->getMessage(), LOG_ERR);
@@ -220,24 +212,16 @@ function getTokenFromServiceAccount($service_account_name, $key_file_location, $
 		}
 
 		try {
-			// API v1
-			/*$checktoken=$client->getAuth()->isAccessTokenExpired();
-			if ($checktoken)
-			{
-				dol_syslog("getTokenFromServiceAccount token seems to be expired, we refresh it", LOG_DEBUG);
-				$client->getAuth()->refreshTokenWithAssertion($cred);
-			}*/
-
 			// API v2
 			$checktoken=$client->isAccessTokenExpired();
 			if ($checktoken) {
-				dol_syslog("getTokenFromServiceAccount token seems to be expired, we refresh it", LOG_DEBUG);
-				$result = $client->refreshTokenWithAssertion();
+				dol_syslog("getTokenFromServiceAccount client->isAccessTokenExpired() return a token ".$checktoken.", so token is expired. We try to refresh it with client->fetchAccessTokenWithAssertion()", LOG_DEBUG);
+				$result = $client->fetchAccessTokenWithAssertion();
 				//var_dump($result);
 			}
 			//var_dump($checktoken);
 		} catch (Exception $e) {
-			dol_syslog("getTokenFromServiceAccount Error ".$e->getMessage(), LOG_ERR);
+			dol_syslog("getTokenFromServiceAccount Error returned by Google with message: ".$e->getMessage(), LOG_ERR);
 			return $e->getMessage();
 		}
 	}
@@ -283,16 +267,27 @@ function createEvent($client, $object, $login = 'primary')
 	$end = new Google_Service_Calendar_EventDateTime();
 
 	$tzfix=0;
-	if (! empty($conf->global->GOOGLE_CAL_TZ_FIX) && is_numeric($conf->global->GOOGLE_CAL_TZ_FIX)) $tzfix=$conf->global->GOOGLE_CAL_TZ_FIX;
+	if (!empty($conf->global->GOOGLE_CAL_TZ_FIX)) {
+		$tzfix=$conf->global->GOOGLE_CAL_TZ_FIX;
+	}
 	if (empty($object->fulldayevent)) {
-		$startTime = dol_print_date(($tzfix*3600) + $object->datep, "dayhourrfc", 'gmt');	// Example '2015-07-30T08:00:00Z' if we ask hour 10:00 on a dolibarr with a TZ = +2
-		$endTime = dol_print_date(($tzfix*3600) + (empty($object->datef)?$object->datep:$object->datef), "dayhourrfc", 'gmt');
+		$reg = array();
+		if (!empty($tzfix) && preg_match('/^[+-](\d\d):\d\d$/', $tzfix, $reg)) {
+			// When tzfix is '+02:00', we use tz in date to get date string '2015-07-30T08:00:00+02:00' instead of '2015-07-30T08:00:00Z'
+			$startTime = dol_print_date(((int) $reg[1] * 3600) + $object->datep, "dayhourrfc", 'gmt');	// Example '2015-07-30T08:00:00Z' if we ask hour 10:00 on a dolibarr with a TZ = +2
+			$endTime = dol_print_date(((int) $reg[1] * 3600) + (empty($object->datef)?$object->datep:$object->datef), "dayhourrfc", 'gmt');
+			$startTime = preg_replace('/Z$/', $tzfix, $startTime);
+			$endTime = preg_replace('/Z$/', $tzfix, $startTime);
+		} else {
+			$startTime = dol_print_date(((int) $tzfix * 3600) + $object->datep, "dayhourrfc", 'gmt');	// Example '2015-07-30T08:00:00Z' if we ask hour 10:00 on a dolibarr with a TZ = +2
+			$endTime = dol_print_date(((int) $tzfix * 3600) + (empty($object->datef)?$object->datep:$object->datef), "dayhourrfc", 'gmt');
+		}
 
 		$start->setDateTime($startTime);	// '2011-06-03T10:00:00.000-07:00'
 		$end->setDateTime($endTime);		// '2011-06-03T10:25:00.000-07:00'
 	} else {
-		$startTime = dol_print_date(($tzfix*3600) + $object->datep, "dayrfc");
-		$endTime = dol_print_date(($tzfix*3600) + (empty($object->datef)?$object->datep:$object->datef) + 3600*24, "dayrfc");	// For fulldayevent, into XML data, endTime must be day after
+		$startTime = dol_print_date(((int) $tzfix * 3600) + $object->datep, "dayrfc");
+		$endTime = dol_print_date(((int) $tzfix * 3600) + (empty($object->datef)?$object->datep:$object->datef) + 3600*24, "dayrfc");	// For fulldayevent, into XML data, endTime must be day after
 
 		$start->setDate($startTime);	// '2011-06-03'
 		$end->setDate($endTime);		// '2011-06-03'
@@ -300,6 +295,12 @@ function createEvent($client, $object, $login = 'primary')
 
 	$event->setStart($start);
 	$event->setEnd($end);
+
+	// TODO Manage color
+	// Retrieve color definitions for calendars and events
+	//$colors = $client->colors->get();
+	//$object->type_color;
+	//$event->setColorId($colorId);
 
 	$event->setSummary(trim($object->label));
 	$event->setLocation($object->location);
@@ -333,6 +334,12 @@ function createEvent($client, $object, $login = 'primary')
 
 	$event->setStatus('confirmed');		// tentative, cancelled
 	$event->setVisibility('default');	// default, public, private (view by attendees only), confidential (do not use)
+
+	// TODO Manage recurring events
+	//$event->setRecurrence($recurrence);
+
+	// TODO Manage reminders
+	//$event->setReminders();
 
 	$event->setGuestsCanModify(false);
 	$event->setGuestsCanInviteOthers(true);
@@ -419,20 +426,32 @@ function updateEvent($client, $eventId, $object, $login = 'primary', $service = 
 		$end = new Google_Service_Calendar_EventDateTime();
 
 		$tzfix=0;
-		if (! empty($conf->global->GOOGLE_CAL_TZ_FIX) && is_numeric($conf->global->GOOGLE_CAL_TZ_FIX)) $tzfix=$conf->global->GOOGLE_CAL_TZ_FIX;
+		if (! empty($conf->global->GOOGLE_CAL_TZ_FIX)) {
+			$tzfix=$conf->global->GOOGLE_CAL_TZ_FIX;
+		}
 		if (empty($object->fulldayevent)) {
-			$startTime = dol_print_date(($tzfix*3600) + $object->datep, "dayhourrfc", 'gmt');	// we use gmt, tz is managed by the tzfix
-			$endTime = dol_print_date(($tzfix*3600) + (empty($object->datef)?$object->datep:$object->datef), "dayhourrfc", 'gmt');	// we use gmt, tz is managed by the tzfix
+			$reg = array();
+			if (!empty($tzfix) && preg_match('/^[+-](\d\d):\d\d$/', $tzfix, $reg)) {
+				// When tzfix is '+02:00', we use tz in date to get date string '2015-07-30T08:00:00+02:00' instead of '2015-07-30T08:00:00Z'
+				$startTime = dol_print_date(((int) $reg[1] * 3600) + $object->datep, "dayhourrfc", 'gmt');	// Example '2015-07-30T08:00:00Z' if we ask hour 10:00 on a dolibarr with a TZ = +2
+				$endTime = dol_print_date(((int) $reg[1] * 3600) + (empty($object->datef)?$object->datep:$object->datef), "dayhourrfc", 'gmt');
+				$startTime = preg_replace('/Z$/', $tzfix, $startTime);
+				$endTime = preg_replace('/Z$/', $tzfix, $startTime);
+			} else {
+				$startTime = dol_print_date(($tzfix * 3600) + $object->datep, "dayhourrfc", 'gmt');	// we use gmt, tz is managed by the tzfix
+				$endTime = dol_print_date(($tzfix * 3600) + (empty($object->datef)?$object->datep:$object->datef), "dayhourrfc", 'gmt');	// we use gmt, tz is managed by the tzfix
+			}
 
 			$start->setDateTime($startTime);	// '2011-06-03T10:00:00.000-07:00'
 			$end->setDateTime($endTime);		// '2011-06-03T10:25:00.000-07:00'
 		} else {
-			$startTime = dol_print_date(($tzfix*3600) + $object->datep, "dayrfc");
-			$endTime = dol_print_date(($tzfix*3600) + (empty($object->datef)?$object->datep:$object->datef) + 3600*24, "dayrfc");	// For fulldayevent, into XML data, endTime must be day after
+			$startTime = dol_print_date(((int) $tzfix * 3600) + $object->datep, "dayrfc");
+			$endTime = dol_print_date(((int) $tzfix * 3600) + (empty($object->datef)?$object->datep:$object->datef) + 3600*24, "dayrfc");	// For fulldayevent, into XML data, endTime must be day after
 
 			$start->setDate($startTime);	// '2011-06-03'
 			$end->setDate($endTime);		// '2011-06-03'
 		}
+
 		$event->setStart($start);
 		$event->setEnd($end);
 
@@ -660,7 +679,9 @@ function syncEventsFromGoogleCalendar($userlogin, User $fuser, $mindate, $max = 
 	global $dolibarr_main_url_root;
 
 	$tzfix=0;
-	if (! empty($conf->global->GOOGLE_CAL_TZ_FIX_G2D) && is_numeric($conf->global->GOOGLE_CAL_TZ_FIX_G2D)) $tzfix=$conf->global->GOOGLE_CAL_TZ_FIX_G2D;
+	if (! empty($conf->global->GOOGLE_CAL_TZ_FIX_G2D) && is_numeric($conf->global->GOOGLE_CAL_TZ_FIX_G2D)) {
+		$tzfix=$conf->global->GOOGLE_CAL_TZ_FIX_G2D;
+	}
 
 	$nbinserted=0;
 	$nbupdated=0;
@@ -669,7 +690,7 @@ function syncEventsFromGoogleCalendar($userlogin, User $fuser, $mindate, $max = 
 	$nbnotdeleted=0;		// Not eleed because option off
 
 	// Create client/token object
-	$key_file_location = $conf->google->multidir_output[$conf->entity]."/".$conf->global->GOOGLE_API_SERVICEACCOUNT_P12KEY;
+	$key_file_location = $conf->google->multidir_output[$conf->entity]."/" . getDolGlobalString('GOOGLE_API_SERVICEACCOUNT_P12KEY');
 	$force_do_not_use_session=true;
 	$servicearray=getTokenFromServiceAccount($conf->global->GOOGLE_API_SERVICEACCOUNT_EMAIL, $key_file_location, $force_do_not_use_session);
 
@@ -679,7 +700,7 @@ function syncEventsFromGoogleCalendar($userlogin, User $fuser, $mindate, $max = 
 	}
 
 	if ($error || $servicearray == null) {
-		$txterror="Failed to login to Google with credentials provided into setup page ".$conf->global->GOOGLE_API_SERVICEACCOUNT_EMAIL.", ".$key_file_location;
+		$txterror="Failed to login to Google with credentials provided into setup page " . getDolGlobalString('GOOGLE_API_SERVICEACCOUNT_EMAIL').", ".$key_file_location;
 		dol_syslog($txterror, LOG_ERR);
 		$errors[]=$txterror;
 		$error++;
@@ -731,6 +752,7 @@ function syncEventsFromGoogleCalendar($userlogin, User $fuser, $mindate, $max = 
 						if ($datest) {
 							// $datest = '2015-07-29T10:00:00+02:00' means 2015-07-29T12:00:00 in TZ +2
 							// We remove the TZ from string. tz will be managed by the ($tzfix*3600)
+							$reg = array();
 							if (preg_match('/^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})(\-|\+)([0-9]{2})/i', $datest, $reg)) {
 								$datest = $reg[1].'-'.$reg[2].'-'.$reg[3].'T'.$reg[4].':'.$reg[5].':'.$reg[6];
 								$tzs=(int) ($reg[7].$reg[8]);

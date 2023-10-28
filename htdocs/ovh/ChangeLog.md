@@ -2,6 +2,10 @@
 
 ## 4.1 Unreleased
 
+* FIX : Compatiblity Dolibarr 18 
+* NEW : add a select all checkbox in the list
+* NEW : add supplier and product selection in form
+* Better PHP 8.2 compatibility 
 * Update ovh lib to v2.1.0 (php 5.6+) - guzzle v6.5.5
 * Add option OVH_DEBUG
 * Support several OVH projects

@@ -1,10 +1,22 @@
 # ChangeLog GOOGLE MODULE FOR <a href="https://www.dolibarr.org">DOLIBARR ERP CRM</a> 
 
 
+## 6.8
+
+- Add more information on setup page
+
+
+## 6.7
+
+- FIX OAUth2 module for Google with scopes for people and calendar
+- GOOGLE_CAL_TZ_FIX accept +00:0x format
+- WARNING: Do not work with Dolibarr 17.0.0 and 17.0.1 and 17.0.2 (need 17.0.3)
+
+
 ## 6.6
 
 - Fix sync of phone
-- Remove use of field punctual. Compatibility with
+- Remove use of field punctual.
 - Save google oauth token into Dolibarr table.
 - Need Dolibarr 16+, PHP 7.2+
 

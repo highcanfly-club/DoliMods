@@ -669,7 +669,7 @@ function googleDeleteGroup($client, $groupID) {
 	}
 	$addheaders=array('GData-Version'=>'3.0', 'Authorization'=>'Bearer '.$access_token, 'If-Match'=>'*');
 	$addheaderscurl=array('Content-Type: application/json','GData-Version: 3.0', 'Authorization: Bearer '.$access_token, 'If-Match: *');
-	$result = getURLContent('https://people.googleapis.com/v1/'.$groupID, 'DELETE', array(), 0, $addheaderscurl);
+	$result = getURLContent('https://people.googleapis.com/v1/'.$groupID, 'DELETE', '', 0, $addheaderscurl);
 	$jsonStr = $result['content'];
 	$json = json_decode($jsonStr);
 	if (!empty($json->error)) {
@@ -700,7 +700,7 @@ function googleUpdateGroup($client, $groupID, $name) {
 	// }
 	// $addheaders=array('GData-Version'=>'3.0', 'Authorization'=>'Bearer '.$access_token, 'If-Match'=>'*');
 	// $addheaderscurl=array('Content-Type: application/json','GData-Version: 3.0', 'Authorization: Bearer '.$access_token, 'If-Match: *');
-	// $result = getURLContent('https://people.googleapis.com/v1/'.$groupID, 'GET', array(), 0, $addheaderscurl);
+	// $result = getURLContent('https://people.googleapis.com/v1/'.$groupID, 'GET', '', 0, $addheaderscurl);
 	// $jsonStr = $result['content'];
 	// $json = json_decode($jsonStr);
 	// $json->name = $name;
@@ -1399,14 +1399,15 @@ function getGContactTypeGroupID($gdata, $type)
 		return -1;
 	}
 
-	// To be sur that group is in google contact, we search it.
+	// A groupID was set into setup.
+	// To be sur that group exists in google contact, we search it.
 	// Note: a groupID must be a hex number or a value among [contactGroups/all, contactGroups/blocked, contactGroups/chatBuddies, contactGroups/coworkers, contactGroups/family, contactGroups/friends, contactGroups/myContacts, contactGroups/starred]
 	if ($groupID) {
 		// We found the value of groupID into the cached constant GOOGLE_TAG_REF_EXT.... so we have it and we don't have to create it.
 		dol_syslog("We found the value of groupID into the cached constant GOOGLE_TAG_REF_EXT... = ".$groupID);
 		/* Removed, this is useless.
 		 // Check that the group exists
-		 $result = getURLContent('https://people.googleapis.com/v1/'.$groupID, 'GET', array(), 0, $addheaderscurl);
+		 $result = getURLContent('https://people.googleapis.com/v1/'.$groupID, 'GET', '', 0, $addheaderscurl);
 		 $jsonStr = $result['content'];
 		 $json = json_decode($jsonStr);
 		 if (empty($json->error)) {
@@ -1418,19 +1419,33 @@ function getGContactTypeGroupID($gdata, $type)
 	// Group not found, we create it
 	// We create it
 	if (! in_array($label, array('contactGroups/all', 'contactGroups/blocked', 'contactGroups/chatBuddies', 'contactGroups/coworkers', 'contactGroups/family', 'contactGroups/friends', 'contactGroups/myContacts', 'contactGroups/starred'))) {
+
 		$jsonData = '{';
 		$jsonData .= '"contactGroup":{';
 		$jsonData .= '"name": "'.$label.'"';
 		$jsonData .= '}';
 		$jsonData .= '}';
+
+		// uncomment for debugging :
+		if (getDolGlobalInt('GOOGLE_DEBUG')) {
+			file_put_contents(DOL_DATA_ROOT . "/dolibarr_google_contactGroups.json", $jsonData);
+			@chmod(DOL_DATA_ROOT . "/dolibarr_google_contactGroups.json", octdec(empty($conf->global->MAIN_UMASK)?'0664':$conf->global->MAIN_UMASK));
+		}
+
 		$result = getURLContent('https://people.googleapis.com/v1/contactGroups', 'POST', $jsonData, 0, $addheaderscurl);
 		$jsonStr = $result['content'];
 		try {
+			// uncomment for debugging :
+			if (getDolGlobalInt('GOOGLE_DEBUG')) {
+				file_put_contents(DOL_DATA_ROOT . "/dolibarr_google_contactGroups_response.json", $jsonStr);
+				@chmod(DOL_DATA_ROOT . "/dolibarr_google_contactGroups_response.json", octdec(empty($conf->global->MAIN_UMASK)?'0664':$conf->global->MAIN_UMASK));
+			}
+
 			$json = json_decode($jsonStr);
 			if (!empty($json->error)) {
 				if ($json->error->status == 'ALREADY_EXISTS') {
 					// If we got an error saying it already exists, we get list of all existing groups
-					$result = getURLContent('https://people.googleapis.com/v1/contactGroups', 'GET', array(), 0, $addheaderscurl);
+					$result = getURLContent('https://people.googleapis.com/v1/contactGroups', 'GET', '', 0, $addheaderscurl);
 					$jsonStrListOfGrp = $result['content'];
 					$jsonListOfGrp = json_decode($jsonStrListOfGrp, true);
 					if (!empty($jsonListOfGrp['contactGroups'])) {
@@ -1532,7 +1547,7 @@ function getGContactGroupID($gdata, $tag, $useremail = 'default') {
 		}
 		$addheaders=array('GData-Version'=>'3.0', 'Authorization'=>'Bearer '.$access_token, 'If-Match'=>'*');
 		$addheaderscurl=array('Content-Type: application/json','GData-Version: 3.0', 'Authorization: Bearer '.$access_token, 'If-Match: *');
-		$result = getURLContent('https://people.googleapis.com/v1/'.$groupID, 'GET', array(), 0, $addheaderscurl);
+		$result = getURLContent('https://people.googleapis.com/v1/'.$groupID, 'GET', '', 0, $addheaderscurl);
 		$jsonStr = $result['content'];
 		$json = json_decode($jsonStr);
 		if (!empty($json->error)) {

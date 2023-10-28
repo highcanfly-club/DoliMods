@@ -221,7 +221,7 @@ if (GETPOST('cleanup')) {
 	$userlogin = empty($conf->global->GOOGLE_LOGIN)?'':$conf->global->GOOGLE_LOGIN;
 
 	// Create client/token object
-	$key_file_location = $conf->google->multidir_output[$conf->entity]."/".$conf->global->GOOGLE_API_SERVICEACCOUNT_P12KEY;
+	$key_file_location = $conf->google->multidir_output[$conf->entity]."/" . getDolGlobalString('GOOGLE_API_SERVICEACCOUNT_P12KEY');
 	$force_do_not_use_session=(in_array(GETPOST('action'), array('testall','testcreate'))?true:false);	// false by default
 	$servicearray=getTokenFromServiceAccount($conf->global->GOOGLE_API_SERVICEACCOUNT_EMAIL, $key_file_location, $force_do_not_use_session, 'service');
 
@@ -231,7 +231,7 @@ if (GETPOST('cleanup')) {
 	}
 
 	if ($servicearray == null) {
-		$txterror="Failed to login to Google with credentials provided into setup page ".$conf->global->GOOGLE_API_SERVICEACCOUNT_EMAIL.", ".$key_file_location;
+		$txterror="Failed to login to Google with credentials provided into setup page " . getDolGlobalString('GOOGLE_API_SERVICEACCOUNT_EMAIL').", ".$key_file_location;
 		dol_syslog($txterror, LOG_ERR);
 		$errors[]=$txterror;
 		$error++;
@@ -283,7 +283,7 @@ if ($action == 'pushallevents') {
 	$userlogin = empty($conf->global->GOOGLE_LOGIN)?'':$conf->global->GOOGLE_LOGIN;
 
 	// Create client/token object
-	$key_file_location = $conf->google->multidir_output[$conf->entity]."/".$conf->global->GOOGLE_API_SERVICEACCOUNT_P12KEY;
+	$key_file_location = $conf->google->multidir_output[$conf->entity]."/" . getDolGlobalString('GOOGLE_API_SERVICEACCOUNT_P12KEY');
 	$force_do_not_use_session=(in_array(GETPOST('action'), array('testall','testcreate'))?true:false);	// false by default
 	$servicearray=getTokenFromServiceAccount($conf->global->GOOGLE_API_SERVICEACCOUNT_EMAIL, $key_file_location, $force_do_not_use_session, 'service');
 
@@ -293,7 +293,7 @@ if ($action == 'pushallevents') {
 	}
 
 	if ($servicearray == null) {
-		$txterror="Failed to login to Google with credentials provided into setup page ".$conf->global->GOOGLE_API_SERVICEACCOUNT_EMAIL.", ".$key_file_location;
+		$txterror="Failed to login to Google with credentials provided into setup page " . getDolGlobalString('GOOGLE_API_SERVICEACCOUNT_EMAIL').", ".$key_file_location;
 		dol_syslog($txterror, LOG_ERR);
 		$errors[]=$txterror;
 		$error++;
@@ -526,7 +526,14 @@ print '</tr>';
 print '<tr class="oddeven">';
 print '<td class="fieldrequired">'.$langs->trans("GOOGLE_API_SERVICEACCOUNT_P12KEY")."</td>";
 print '<td>';
-if (! empty($conf->global->GOOGLE_API_SERVICEACCOUNT_P12KEY)) print getDolGlobalString('GOOGLE_API_SERVICEACCOUNT_P12KEY').'<br>';
+if (! empty($conf->global->GOOGLE_API_SERVICEACCOUNT_P12KEY)) {
+	print getDolGlobalString('GOOGLE_API_SERVICEACCOUNT_P12KEY');
+	if (!dol_is_file($conf->google->multidir_output[$conf->entity]."/" . getDolGlobalString('GOOGLE_API_SERVICEACCOUNT_P12KEY'))) {
+		$langs->load("errors");
+		print ' '.img_warning($langs->trans("ErrorFileNotFound", $conf->google->multidir_output[$conf->entity]."/" . getDolGlobalString('GOOGLE_API_SERVICEACCOUNT_P12KEY')));
+	}
+	print '<br>';
+}
 print '<input class="minwidth400" type="file" name="GOOGLE_API_SERVICEACCOUNT_P12KEY_file">';
 print '</td>';
 print '<td class="aaa">';
