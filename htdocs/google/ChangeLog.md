@@ -1,9 +1,16 @@
 # ChangeLog GOOGLE MODULE FOR <a href="https://www.dolibarr.org">DOLIBARR ERP CRM</a> 
 
 
+## 6.8.1
+
+- Fix sync of job position and company in sync of contact
+
+
 ## 6.8
 
 - Add more information on setup page
+- NEW Add job position and company in sync of contacts, add also in mass init sync.
+- NEW Add option GOOGLE_TAG_REF_EXT_NOCACHE to disable group cache constant
 
 
 ## 6.7

@@ -29,22 +29,19 @@ require_once DOL_DOCUMENT_ROOT.'/core/class/html.formother.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/doleditor.class.php';
 dol_include_once("/ecotaxdeee/lib/ecotaxdeee.lib.php");
 
-if (!$user->admin) accessforbidden();
+if (!$user->admin) {
+	accessforbidden();
+}
 
-$langs->load("ecotaxdeee@ecotaxdeee");
-$langs->load("admin");
-$langs->load("other");
-$langs->load("orders");
-$langs->load("bills");
-$langs->load("propal");
+$langs->loadLangs(array("admin", "other", "ecotaxdeee@ecotaxdeee", "orders", "bills", "propal"));
 
-$def = array();
-$action=GETPOST("action");
+$action = GETPOST("action", 'aZ09');
 
 
 /*
  * Actions
  */
+
 if ($action == 'save') {
 	$db->begin();
 
@@ -64,6 +61,23 @@ if ($action == 'save') {
 	} else {
 		$db->rollback();
 		setEventMessage($langs->trans("Error"));
+	}
+}
+
+if ($action == 'setCode') {
+	$status = GETPOST('status', 'alpha');
+
+	if (dolibarr_set_const($db, 'ECOTAX_CALCULATION_MODE', $status, 'chaine', 0, '', 0) > 0) {
+		if ($status == 1){
+			setEventMessages("SetCodeForEcotaxEnabled", null);
+		}else {
+			setEventMessages("SetCodeForEcotaxDisabled", null);
+
+		}
+		header("Location: ".$_SERVER["PHP_SELF"]);
+		exit;
+	} else {
+		dol_print_error($db);
 	}
 }
 
@@ -156,6 +170,22 @@ print $form->selectyesno("WEEE_DISABLE_VAT_ON_ECOTAX",$selectedvalue,1);
 print "</td>";
 print "</tr>";
 */
+
+//For enable insert Code and amount
+print '<tr class="oddeven">';
+print "<td>".$langs->trans("InsertCodeForEcoTax")."</td>";
+
+$active_code = (!getDolGlobalString('ECOTAX_CALCULATION_MODE') ? false : true);
+if ($active_code) {
+	print '<td><a class="reposition" href="'.$_SERVER['PHP_SELF'].'?action=setCode&token='.newToken().'&status=0">';
+	print img_picto($langs->trans("Activated"), 'switch_on');
+	print '</a></td>';
+} else {
+	print '<td><a class="reposition" href="'.$_SERVER['PHP_SELF'].'?action=setCode&token='.newToken().'&status=1">';
+	print img_picto($langs->trans("Disabled"), 'switch_off');
+	print '</a></td>';
+}
+print "</tr>";
 
 // ECOTAXDEEE_DOC_FOOTER
 print '<tr class="oddeven">';

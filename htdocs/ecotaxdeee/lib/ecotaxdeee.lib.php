@@ -38,11 +38,18 @@ function ecotaxdeee_prepare_head()
 	$head[$h][2] = 'tabsetup';
 	$h++;
 
-	$head[$h][0] = 'about.php';
-	$head[$h][1] = $langs->trans("About");
-	$head[$h][2] = 'tababout';
-	$h++;
+	$active_code = (!getDolGlobalString('ECOTAX_CALCULATION_MODE') ? false : true);
+	if ($active_code) {
+		$head[$h][0] = 'setup.php';
+		$head[$h][1] = $langs->trans("CodeAndAmountTable");
+		$head[$h][2] = 'tabmoresetup';
+		$h++;
+	}
 
+        $head[$h][0] = 'about.php';
+        $head[$h][1] = $langs->trans("About");
+        $head[$h][2] = 'tababout';
+        $h++;
 
 	return $head;
 }

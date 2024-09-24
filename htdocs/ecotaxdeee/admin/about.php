@@ -62,7 +62,7 @@ print_fiche_titre($langs->trans("EcoTaxDeeSetup"), $linkback, 'setup');
 
 $head=ecotaxdeee_prepare_head();
 
-dol_fiche_head($head, 'tababout', '', (((float) DOL_VERSION < 6) ? 0 : -1));
+dol_fiche_head($head, 'tababout', '', -1);
 
 dol_include_once('/ecotaxdeee/core/modules/modEcoTaxDeee.class.php');
 $tmpmodule = new modEcoTaxDeee($db);
@@ -80,7 +80,7 @@ print '<a href="'.$url.'" target="_blank"><img border="0" width="180" src="'.DOL
 print '<br>';
 print $langs->trans("MoreCloudHosting").'<br>';
 print '&nbsp; &nbsp; &nbsp; '.$langs->trans("MoreCloudHostingLink").'<br>';
-$url='https://www.dolicloud.com';
+$url='https://www.dolicloud.com?origin=dolimods';
 print '<a href="'.$url.'" target="_blank"><img border="0" width="180" src="../img/dolicloud_logo.png"></a><br><br><br>';
 
 print '<br>';

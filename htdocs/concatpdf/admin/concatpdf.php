@@ -96,7 +96,7 @@ if (preg_match('/del_(.*)/', $action, $reg)) {
 }
 
 // Send file
-if (GETPOST('sendit') && ! empty($conf->global->MAIN_UPLOAD_DOC)) {
+if (GETPOST('sendit') && getDolGlobalString('MAIN_UPLOAD_DOC')) {
 	$error=0;
 	if (! GETPOST('module', 'alpha') || is_numeric(GETPOST('module', 'alpha'))) {
 		$error++;
@@ -256,6 +256,24 @@ if (! empty($conf->global->MAIN_USE_JQUERY_MULTISELECT)) {
 		}
 	}
 	print '</td></tr>';
+
+	// Interleave ? or at the end ?
+	print '<tr class="oddeven">';
+	print '<td>'.$langs->trans("EnableMixedConcatenation").'</td>';
+	print '<td align="center" width="20">&nbsp;</td>';
+
+	print '<td align="center" width="100">';
+	if (! empty($conf->use_javascript_ajax)) {
+		print ajax_constantonoff('CONCATPDF_MIXED_CONCATENATION_ENABLED', '', 0);
+	} else {
+		if (empty($conf->global->CONCATPDF_MIXED_CONCATENATION_ENABLED)) {
+			print '<a href="'.$_SERVER['PHP_SELF'].'?action=set_CONCATPDF_MIXED_CONCATENATION_ENABLED">'.img_picto($langs->trans("Disabled"), 'off').'</a>';
+		} else {
+			print '<a href="'.$_SERVER['PHP_SELF'].'?action=del_CONCATPDF_MIXED_CONCATENATION_ENABLED">'.img_picto($langs->trans("Enabled"), 'on').'</a>';
+		}
+	}
+	print '</td></tr>';
+
 
 	print '</table>';
 }

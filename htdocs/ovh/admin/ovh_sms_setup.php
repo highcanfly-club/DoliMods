@@ -49,15 +49,13 @@ use GuzzleHttp\Client as GClient;
 
 
 // Load traductions files requiredby by page
-$langs->load("admin");
-$langs->load("companies");
-$langs->load("ovh@ovh");
-$langs->load("sms");
+$langs->loadLangs(array("admin", "companies", "ovh@ovh", "sms"));
 
-if (!$user->admin)
-accessforbidden();
+if (!$user->admin) {
+	accessforbidden();
+}
+
 // Get parameters
-
 $action=GETPOST('action', 'aZ09');
 
 // Protection if external user
@@ -74,6 +72,15 @@ $substitutionarrayfortest=array(
 
 // Activate error interceptions
 if (! empty($conf->global->MAIN_ENABLE_EXCEPTION)) {
+	/**
+	 * @param $code string code
+	 * @param $message string message
+	 * @param $fichier string filename
+	 * @param $ligne string lien id
+	 * @param $contexte string context
+	 * @return void
+	 * @throws Exception
+	 */
 	function traitementErreur($code, $message, $fichier, $ligne, $contexte)
 	{
 		if (error_reporting() & $code) {
@@ -161,22 +168,22 @@ if ($action == 'send' && ! $_POST['cancel']) {
 
 		try {
 			$smsfile = new CSMSFile($sendto, $smsfrom, $body, $deliveryreceipt, $deferred, $priority, $class);  // This define OvhSms->login, pass, session and account
-		} catch(Exception $e) {
+		} catch (Exception $e) {
 			setEventMessages($e->getMessage(), null, 'errors');
 		}
 
 		$smsfile->nostop = GETPOST('disablestop', 'int');
 		$smsfile->socid = 0;
-		$smsfile->contactid = 0;
+		//$smsfile->contactid = 0;
 		$smsfile->contact_id = 0;
 		$smsfile->fk_project = 0;
 
-		$result=$smsfile->sendfile(); // This send SMS
+		$result = $smsfile->sendfile(); // This send SMS
 
-		if ($result > 0) {
-			$mesg='<div class="ok">'.$langs->trans("SmsSuccessfulySent", $smsfrom, $sendto).'</div>';
+		if ($result) {
+			setEventMessages($langs->trans("SmsSuccessfulySent", $smsfrom, $sendto), null, 'mesgs');
 		} else {
-			$mesg='<div class="error">'.$langs->trans("ResultKo").'<br>'.$smsfile->error.'</div>';
+			setEventMessages($langs->trans("ResultKo").'<br>'.$smsfile->error, null, 'errors');
 		}
 
 		$action='';
@@ -194,7 +201,7 @@ if ($action == 'send' && ! $_POST['cancel']) {
 $WS_DOL_URL = empty($conf->global->OVHSMS_SOAPURL) ? '' : strval($conf->global->OVHSMS_SOAPURL);
 dol_syslog("Will use URL=".$WS_DOL_URL, LOG_DEBUG);
 
-$smsAccount = empty($conf->global->OVHSMS_ACCOUNT) ? '' : strval($conf->global->OVHSMS_ACCOUNT) ;
+$smsAccount = empty($conf->global->OVHSMS_ACCOUNT) ? '' : strval($conf->global->OVHSMS_ACCOUNT);
 
 llxHeader('', $langs->trans('OvhSmsSetup'), '', '');
 
@@ -211,14 +218,10 @@ if (! empty($conf->global->OVH_OLDAPI) && (empty($conf->global->OVHSMS_NICK) || 
 
 	// Formulaire d'ajout de compte SMS qui sera valable pour tout Dolibarr
 	print '<form method="post" action="'.$_SERVER["PHP_SELF"].'">';
-	if ((float) DOL_VERSION >= 11.0) {
-		print '<input type="hidden" name="token" value="'.newToken().'">';
-	} else {
-		print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
-	}
+	print '<input type="hidden" name="token" value="'.newToken().'">';
 	print '<input type="hidden" name="action" value="setvalue_account">';
 
-	dol_fiche_head($head, 'sms', $langs->trans("Ovh"), -1);
+	print dol_get_fiche_head($head, 'sms', $langs->trans("Ovh"), -1);
 
 	if (empty($conf->global->OVH_OLDAPI) && (empty($conf->global->OVHAPPKEY) || empty($conf->global->OVHAPPSECRET) || empty($conf->global->OVHCONSUMERKEY))) {
 		echo '<div class="warning">'.$langs->trans("OvhAuthenticationPartNotConfigured").'</div>';
@@ -238,12 +241,12 @@ if (! empty($conf->global->OVH_OLDAPI) && (empty($conf->global->OVHSMS_NICK) || 
 	print $langs->trans("OvhSmsLabelAccount").'</td><td>';
 	print '<input type="text" name="OVHSMS_ACCOUNT" value="'.$smsAccount.'">';
 	print '<br><span class="opacitymedium">'.$langs->trans("Example").': sms-aa123-1</span>';
-	print '<td>'.'<a href="ovh_smsrecap.php" target="_blank">'.$langs->trans("ListOfSmsAccountsForNH").'</a>';
+	print '<td><a href="ovh_smsrecap.php" target="_blank">'.$langs->trans("ListOfSmsAccountsForNH").'</a>';
 	print '</td></tr>';
 
 	print '</table>';
 
-	dol_fiche_end();
+	print dol_get_fiche_end();
 
 	print '<div class="center"><input type="submit" class="button" value="'.$langs->trans("Modify").'"></div>';
 

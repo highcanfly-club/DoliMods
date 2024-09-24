@@ -106,10 +106,16 @@ $htmlother=new FormAdmin($db);
 
 llxHeader();
 
-$object=new stdClass();
-$object->id=1;
-$object->number='989';
-$object->total_ttc='989.99';
+$object = new stdClass();
+$object->id = 1;
+$object->number = '989';
+$object->total_ht = '824.99';
+$object->total_ttc = '989.99';
+$object->total_tva = '165.00';
+$object->multicurrency_total_ht = '824.99';
+$object->multicurrency_total_ttc = '989.99';
+$object->multicurrency_total_tva = '165.00';
+$object->multicurrency_code = $conf->currency;
 $substitutionarray=array();
 complete_substitutions_array($substitutionarray, $outputlangs, $object);
 
@@ -136,14 +142,14 @@ dol_fiche_head($head, 'tabsetup', '', (((float) DOL_VERSION <= 8)?0:-1));
 
 // Mode
 print '<form action="'.$_SERVER["PHP_SELF"].'" method="post">';
-print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
+print '<input type="hidden" name="token" value="'.newToken().'">';
 print '<input type="hidden" name="action" value="test">';
 
 print $langs->trans("NUMBERWORDS_USE_CURRENCY_SYMBOL").' ';
 
 // Active
-if (! empty($conf->global->NUMBERWORDS_USE_CURRENCY_SYMBOL)) {
-	print '<a class="valignmiddle" href="' . $_SERVER["PHP_SELF"] . '?action=del&value=NUMBERWORDS_USE_CURRENCY_SYMBOL&level='.urlencode($level).'&valuetest='.urlencode($valuetest).'">';
+if (getDolGlobalString('NUMBERWORDS_USE_CURRENCY_SYMBOL')) {
+	print '<a class="valignmiddle" href="' . $_SERVER["PHP_SELF"] . '?action=del&value=NUMBERWORDS_USE_CURRENCY_SYMBOL&level='.urlencode($level).'&valuetest='.urlencode($valuetest).'&token='.newToken().'">';
 	print img_picto($langs->trans("Enabled"), 'switch_on');
 	print '</a>';
 
@@ -151,21 +157,37 @@ if (! empty($conf->global->NUMBERWORDS_USE_CURRENCY_SYMBOL)) {
 
 	print $langs->trans("NUMBERWORDS_USE_ADD_SHORTCODE_WITH_SYMBOL").' ';
 	// Active
-	if (! empty($conf->global->NUMBERWORDS_USE_ADD_SHORTCODE_WITH_SYMBOL)) {
-		print '<a class="valignmiddle" href="' . $_SERVER["PHP_SELF"] . '?action=del&value=NUMBERWORDS_USE_ADD_SHORTCODE_WITH_SYMBOL&level='.urlencode($level).'&valuetest='.urlencode($valuetest).'">';
+	if (getDolGlobalString('NUMBERWORDS_USE_ADD_SHORTCODE_WITH_SYMBOL')) {
+		print '<a class="valignmiddle" href="' . $_SERVER["PHP_SELF"] . '?action=del&value=NUMBERWORDS_USE_ADD_SHORTCODE_WITH_SYMBOL&level='.urlencode($level).'&valuetest='.urlencode($valuetest).'&token='.newToken().'">';
 		print img_picto($langs->trans("Enabled"), 'switch_on');
 		print '</a>';
 	} else {
-		print '<a class="valignmiddle" href="' . $_SERVER["PHP_SELF"] . '?action=set&value=NUMBERWORDS_USE_ADD_SHORTCODE_WITH_SYMBOL&level='.urlencode($level).'&valuetest='.urlencode($valuetest).'">' . img_picto($langs->trans("Disabled"), 'switch_off') . '</a>';
+		print '<a class="valignmiddle" href="' . $_SERVER["PHP_SELF"] . '?action=set&value=NUMBERWORDS_USE_ADD_SHORTCODE_WITH_SYMBOL&level='.urlencode($level).'&valuetest='.urlencode($valuetest).'&token='.newToken().'">' . img_picto($langs->trans("Disabled"), 'switch_off') . '</a>';
 	}
 } else {
-	print '<a class="valignmiddle" href="' . $_SERVER["PHP_SELF"] . '?action=set&value=NUMBERWORDS_USE_CURRENCY_SYMBOL&level='.urlencode($level).'&valuetest='.urlencode($valuetest).'">' . img_picto($langs->trans("Disabled"), 'switch_off') . '</a>';
+	print '<a class="valignmiddle" href="' . $_SERVER["PHP_SELF"] . '?action=set&value=NUMBERWORDS_USE_CURRENCY_SYMBOL&level='.urlencode($level).'&valuetest='.urlencode($valuetest).'&token='.newToken().'">' . img_picto($langs->trans("Disabled"), 'switch_off') . '</a>';
 }
 print '<br>';
 
+// Uppercase
+print $langs->trans("NUMBERWORDS_FORCE_UPPERCASE").' ';
+if (!getDolGlobalString('NUMBERWORDS_FORCE_UPPERCASE')) {
+	// Button off, click to enable
+	$enabledisablehtml .= '<a class="reposition valignmiddle" href="'.$_SERVER["PHP_SELF"].'?action=set&value=NUMBERWORDS_FORCE_UPPERCASE&token='.newToken().'">';
+	$enabledisablehtml .= img_picto($langs->trans("Disabled"), 'switch_off');
+	$enabledisablehtml .= '</a>';
+} else {
+	// Button on, click to disable
+	$enabledisablehtml .= '<a class="reposition valignmiddle" href="'.$_SERVER["PHP_SELF"].'?action=del&value=NUMBERWORDS_FORCE_UPPERCASE&token='.newToken().'">';
+	$enabledisablehtml .= img_picto($langs->trans("Activated"), 'switch_on');
+	$enabledisablehtml .= '</a>';
+}
+print $enabledisablehtml;
 print '<br>';
 
-print '<table class="noborder" width="100%">';
+print '<br>';
+
+print '<table class="noborder centpercent">';
 print '<tr class="liste_titre">';
 print '<td>'.$langs->trans("Type").'</td>';
 print '<td>'.$langs->trans("Example").'</td>';
@@ -189,14 +211,15 @@ $newval=make_substitutions('__AMOUNT_TEXT__', $substitutionarray);
 print '<td>'.$newval.'</td></tr>';
 
 print '<tr class="oddeven">';
-print '<td><select class="flat" name="level">';
-print '<option value="0" '.($level=='0'?'SELECTED':'').'>'.$langs->trans("Number").'</option>';
-print '<option value="1" '.($level=='1'?'SELECTED':'').'>'.$langs->trans("Amount").'</option>';
+print '<td><select class="flat" name="level" id="numberwordtype">';
+print '<option value="0" '.($level=='0'?'SELECTED':'').'>'.$langs->trans("Number").' (integer)</option>';
+print '<option value="1" '.($level=='1'?'SELECTED':'').'>'.$langs->trans("Amount").' ('.getDolGlobalInt('MAIN_MAX_DECIMALS_TOT', 2).' digits max)</option>';
 print '</select>';
+print ajax_combobox("numberwordtype");
 print '</td>';
-print '<td><input type="text" name="valuetest" class="flat" value="'.$valuetest.'"></td>';
+print '<td><input type="text" name="valuetest" class="flat maxwidth125" value="'.$valuetest.'"></td>';
 print '<td>';
-print $htmlother->select_language(GETPOST('lang_id', 'alpha')?GETPOST('lang_id', 'alpha'):$langs->defaultlang, 'lang_id');
+print $htmlother->select_language(GETPOST('lang_id', 'alpha')?GETPOST('lang_id', 'alpha'):$langs->defaultlang, 'lang_id', 0, [], '', 0, 0, 'maxwidth200');
 print '</td>';
 print '<td><input type="submit" class="button" value="'.$langs->trans("ToTest").'"></td>';
 print '<td><strong>'.$newvaltest.'</strong>';
@@ -213,15 +236,15 @@ dol_fiche_end();
 list($whole, $decimal) = explode('.', $value);
 if ($level) {
 	if (strlen($decimal) > $conf->global->MAIN_MAX_DECIMALS_TOT) {
-		print '<font class="warning">'.$langs->trans("Note").': '.$langs->trans("MAIN_MAX_DECIMALS_TOT").': ' . getDolGlobalString('MAIN_MAX_DECIMALS_TOT').'</font>';
+		print '<font class="warning">'.$langs->trans("Note").':<br>* '.$langs->trans("MAIN_MAX_DECIMALS_TOT").': ' . getDolGlobalString('MAIN_MAX_DECIMALS_TOT').'</font>';
 		print ' - <a href="'.DOL_URL_ROOT.'/admin/limits.php">'.$langs->trans("SetupToChange").'</a>';
 	} else {
-		print '<font class="info">'.$langs->trans("Note").': '.$langs->trans("MAIN_MAX_DECIMALS_TOT").': ' . getDolGlobalString('MAIN_MAX_DECIMALS_TOT').'</font>';
+		print '<font class="info">'.$langs->trans("Note").':<br>* '.$langs->trans("MAIN_MAX_DECIMALS_TOT").': ' . getDolGlobalString('MAIN_MAX_DECIMALS_TOT').'</font>';
 		print ' - <a href="'.DOL_URL_ROOT.'/admin/limits.php">'.$langs->trans("SetupToChange").'</a>';
 	}
 }
 print '<br>';
-print '<font class="info">'.$langs->trans("CompanyCurrency").': '.$conf->currency.'</font>';
+print '* <font class="info">'.$langs->trans("CompanyCurrency").': '.$conf->currency.'</font>';
 print ' - <a href="'.DOL_URL_ROOT.'/admin/company.php">'.$langs->trans("SetupToChange").'</a>';
 
 

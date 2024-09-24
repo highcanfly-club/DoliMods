@@ -52,7 +52,7 @@ $search_tag_supplier=GETPOST('search_tag_supplier');
 $search_departement = GETPOST("state_id", "int");
 $search_customer = GETPOST('search_customer', 'alpha');
 $search_supplier = GETPOST('search_supplier', 'alpha');
-$search_status = GETPOST('search_status', 'alpha');
+$search_status = GETPOST('search_status', 'intcomma');
 
 if ($search_status == '') {
 	$search_status = '1';
@@ -127,7 +127,7 @@ if (versioncompare(versiondolibarrarray(), array(3,7,-3)) >= 0) {
 	$countrylabelfield='label';
 }
 
-llxheader();
+llxHeader();
 
 $form=new Form($db);
 $formother = new FormOther($db);

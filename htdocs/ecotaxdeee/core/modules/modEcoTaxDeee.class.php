@@ -33,7 +33,6 @@ include_once DOL_DOCUMENT_ROOT ."/core/modules/DolibarrModules.class.php";
  */
 class modEcoTaxDeee extends DolibarrModules
 {
-
 	/**
 	 *   Constructor. Define names, constants, directories, boxes, permissions
 	 *
@@ -41,8 +40,6 @@ class modEcoTaxDeee extends DolibarrModules
 	 */
 	function __construct($db)
 	{
-		global $conf;
-
 		$this->db = $db;
 
 		// Id for module (must be unique).
@@ -59,7 +56,7 @@ class modEcoTaxDeee extends DolibarrModules
 		// Module description used if translation string 'ModuleXXXDesc' not found (where XXX is value of numeric property 'numero' of module)
 		$this->description = "Module to add ecotax lines automatically";
 		$this->editor_name = 'DoliCloud';
-		$this->editor_url = 'https://www.dolicloud.com';
+		$this->editor_url = 'https://www.dolicloud.com?origin=dolimods';
 		// Possible values for version are: 'development', 'experimental', 'dolibarr' or version
 		$this->version = '4.2';
 		// Key used in llx_const table to save module status enabled/disabled
@@ -83,7 +80,7 @@ class modEcoTaxDeee extends DolibarrModules
 		$this->depends = array('modProduct');		// List of modules id that must be enabled if this module is enabled
 		$this->requiredby = array();	             // List of modules id to disable if this one is disabled
 		$this->phpmin = array(7,0);					// Minimum version of PHP required by module
-		$this->need_dolibarr_version = array(16,0,-2);	// Minimum version of Dolibarr required by module
+		$this->need_dolibarr_version = array(17, 0, -4);	// Minimum version of Dolibarr required by module
 		$this->langfiles = array("ecotaxdeee@ecotaxdeee");
 
 		// Constants
@@ -147,7 +144,8 @@ class modEcoTaxDeee extends DolibarrModules
 		// Create extrafields
 		include_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 		$extrafields = new ExtraFields($this->db);
-		$result1=$extrafields->addExtraField('ecotaxdeee', $langs->trans("Ecotax"), 'double', 41, '24,8', 'product', 0, 0, '', '', 1);
+		$result1=$extrafields->addExtraField('ecotaxdeee', $langs->trans("EcotaxAmount"), 'double', 41, '24,8', 'product', 0, 0, '', '', 1, '', -1, '', '', '', 'ecotaxdeee@ecotaxdeee', '!getDolGlobalString("ECOTAX_CALCULATION_MODE")');
+		$result1=$extrafields->addExtraField('ecotaxdeeecode', $langs->trans("CodeEcotax"), 'varchar', 42, '16', 'product', 0, 0, '', '', 1, '', -1, '', '', '', 'ecotaxdeee@ecotaxdeee', 'getDolGlobalString("ECOTAX_CALCULATION_MODE")');
 		if (! $result1) {
 			$this->error=$extrafields->error;
 			return -1;
@@ -183,6 +181,7 @@ class modEcoTaxDeee extends DolibarrModules
 	 */
 	function load_tables()
 	{
-		return $this->_load_tables('/ecotax/sql/');
+		return $this->_load_tables('/ecotaxdeee/sql/');
+
 	}
 }

@@ -153,12 +153,13 @@ class InterfaceGoogleContactSynchro extends DolibarrTriggers
 			}
 
 			// Create client/token object
-			$key_file_location = $conf->google->multidir_output[$conf->entity]."/".(!empty($conf->global->GOOGLE_API_SERVICEACCOUNT_P12KEY)?$conf->global->GOOGLE_API_SERVICEACCOUNT_P12KEY:"");
+			$key_file_location = $conf->google->multidir_output[$conf->entity]."/".getDolGlobalString('GOOGLE_API_SERVICEACCOUNT_P12KEY');
 			$force_do_not_use_session=false; // by default
 			if (preg_match('/^testall/', GETPOST('action'))) $force_do_not_use_session=true;
 			if (preg_match('/^testcreate/', GETPOST('action'))) $force_do_not_use_session=true;
 
-			$servicearray = getTokenFromServiceAccount(!empty($conf->global->GOOGLE_API_SERVICEACCOUNT_EMAIL)?$conf->global->GOOGLE_API_SERVICEACCOUNT_EMAIL:"", $key_file_location, $force_do_not_use_session, 'web');
+			// Get the array with connection/token for contact sync (we use the OAuth token generated in mode Web)
+			$servicearray = getTokenFromServiceAccount(getDolGlobalString('GOOGLE_API_SERVICEACCOUNT_EMAIL'), $key_file_location, $force_do_not_use_session, 'web');
 
 			if (! is_array($servicearray) || $servicearray == null) {
 				$this->error="Failed to login to Google with current token";
@@ -170,7 +171,9 @@ class InterfaceGoogleContactSynchro extends DolibarrTriggers
 				return -1;
 			} else {
 				if ($action == 'COMPANY_CREATE' || $action == 'CONTACT_CREATE' || $action == 'MEMBER_CREATE') {
+					// Create the object on google side
 					$ret = googleCreateContact($servicearray, $object, $userlogin);
+
 					if (! preg_match('/ERROR/', $ret)) {
 						if ($ret && ! preg_match('/google\.com/', $ret)) {
 							$ret='google:'.$ret;
@@ -185,7 +188,8 @@ class InterfaceGoogleContactSynchro extends DolibarrTriggers
 							$type = ($type === 'societe' ? 'thirdparty' : $type);
 
 							// Check and update groups
-							$typeGroupID = getGContactTypeGroupID($servicearray, $type);
+							$typeGroupID = getGContactTypeGroupID($servicearray, $type);	// $typeGroupID will be defined if group already exists
+
 							if ($typeGroupID && preg_match('/contactGroups\/.*/', $typeGroupID)) {
 								$ret = googleLinkGroup($servicearray, $typeGroupID, $contactID);
 								if ($ret > 0) {
@@ -218,7 +222,7 @@ class InterfaceGoogleContactSynchro extends DolibarrTriggers
 					if ($gid && preg_match('/google/i', $object->ref_ext)) { // This record is linked with Google Contact
 						$ret = googleUpdateContact($servicearray, $gid, $object, $userlogin);
 						if ($ret === 0) { // Fails to update because not found, we try to create
-							dol_syslog("Echec de la mise a jour, on force la création");
+							dol_syslog("Failed to update thirdparty, contact or member. It may have been deleted on Google side. we force the creation");
 							$ret = googleCreateContact($servicearray, $object, $userlogin);
 							//var_dump($ret); exit;
 

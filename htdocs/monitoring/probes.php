@@ -66,7 +66,7 @@ if ($action == 'confirm_deleteprobe' && ! GETPOST('cancel')) {
 
 	$db->begin();
 
-	$result=$probe->delete();
+	$result=$probe->delete($user);
 
 	if ($result > 0) {
 		$db->commit();
@@ -166,7 +166,7 @@ if ($action != 'edit') {
 	print '<div class="titre">'.$langs->trans("AddProbe").'</div>';
 
 	print '<form name="addnewprobe" action="'.$_SERVER["PHP_SELF"].'" method="post">';
-	print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
+	print '<input type="hidden" name="token" value="'.newToken().'">';
 
 	print '<table class="liste" width="100%">';
 
@@ -326,7 +326,7 @@ if ($action != 'edit') {
 			$obj = $db->fetch_object($resql);
 
 			print "<form name=\"externalrssconfig\" action=\"".$_SERVER["PHP_SELF"]."\" method=\"post\">";
-			print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
+			print '<input type="hidden" name="token" value="'.newToken().'">';
 
 			$var=!$var;
 			print "<tr ".$bc[$var].">";
@@ -374,7 +374,7 @@ if ($action != 'edit') {
 	print '<div class="titre">'.$langs->trans("EditProbe").'</div>';
 
 	print '<form name="editprobe" action="'.$_SERVER["PHP_SELF"].'" method="post">';
-	print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
+	print '<input type="hidden" name="token" value="'.newToken().'">';
 	print '<input type="hidden" name="id" value="'.$id.'">';
 
 	print '<table class="liste" width="100%">';

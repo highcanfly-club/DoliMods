@@ -67,7 +67,7 @@ class OvhSms extends CommonObject
 	 *
 	 * 	@param	DoliDB	$db		Database handler
 	 */
-	function __construct($db)
+	public function __construct($db)
 	{
 		global $conf, $langs;
 		$this->db = $db;
@@ -158,7 +158,7 @@ class OvhSms extends CommonObject
 	 *
 	 * @return	void
 	 */
-	function logout()
+	public function logout()
 	{
 		global $conf;
 
@@ -167,13 +167,15 @@ class OvhSms extends CommonObject
 	}
 
 
+	// phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps,PEAR.NamingConventions.ValidFunctionName.PublicUnderscore
 	/**
 	 * Send SMS
 	 *
 	 * @return	int     <=0 if error, >0 if OK
 	 */
-	function SmsSend()
+	public function SmsSend()
 	{
+		// phpcs:enable
 		global $db, $conf, $langs, $user;
 
 		try {
@@ -212,24 +214,17 @@ class OvhSms extends CommonObject
 				try {
 					//var_dump($content);
 					$resultPostJob = $this->conn->post('/sms/'. $this->account . '/jobs/', $content);
-					/*$resultPostJob = Array
-					(
+					/* Example of result:
+					$resultPostJob = array(
 						[totalCreditsRemoved] => 1
-						[invalidReceivers] => Array
-						(
-							)
-
-						[ids] => Array
-						(
+						[invalidReceivers] => array()
+						[ids] => array(
 							[0] => 26929925
 							)
-
-						[validReceivers] => Array
-						(
+						[validReceivers] => array(
 							[0] => +3366204XXXX
 							)
-
-						)*/
+					); */
 					//var_dump($resultPostJob);
 					if ($resultPostJob['totalCreditsRemoved'] > 0) {
 						$object = new stdClass();
@@ -279,23 +274,28 @@ class OvhSms extends CommonObject
 						}
 
 						return 1;
-					} else return -1;
+					} else {
+						$this->error = 'resultPostJob["totalCreditsRemoved"] not set. '.var_export($resultPostJob, true);
+						return -1;
+					}
 				} catch (Exception $e) {
-					$this->error=$e->getMessage();
-					return -1;
+					$this->error = $e->getMessage();
+					return -2;
 				}
 			}
 		} catch (SoapFault $fault) {
 			$errmsg="Error ".$fault->faultstring;
 			dol_syslog(get_class($this)."::SmsSend ".$errmsg, LOG_ERR);
-			$this->error.=($this->error?', '.$errmsg:$errmsg);
+			$this->error .= ($this->error?', '.$errmsg:$errmsg);
+			return -3;
 		} catch (Exception $e) {
 			$errmsg="Error ".$e->getMessage();
 			dol_syslog(get_class($this)."::SmsSend ".$errmsg, LOG_ERR);
-			$this->error.=($this->error?', '.$errmsg:$errmsg);
-			return -1;
+			$this->error .= ($this->error?', '.$errmsg:$errmsg);
+			return -4;
 		}
-		return -1;
+
+		return -5;
 	}
 
 	/**
@@ -303,7 +303,7 @@ class OvhSms extends CommonObject
 	 *
 	 * @return	void
 	 */
-	function printListAccount()
+	public function printListAccount()
 	{
 		$resultaccount = $this->getSmsListAccount();
 		print '<select name="ovh_account" id="ovh_account">';
@@ -318,7 +318,7 @@ class OvhSms extends CommonObject
 	 *
 	 * @return	array
 	 */
-	function getSmsListAccount()
+	public function getSmsListAccount()
 	{
 		global $conf;
 
@@ -345,13 +345,15 @@ class OvhSms extends CommonObject
 		}
 	}
 
+	// phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps,PEAR.NamingConventions.ValidFunctionName.PublicUnderscore
 	/**
 	 * Return Credit
 	 *
 	 * @return	array
 	 */
-	function CreditLeft()
+	public function CreditLeft()
 	{
+		// phpcs:enable
 		global $conf;
 
 		try {
@@ -378,13 +380,15 @@ class OvhSms extends CommonObject
 		}
 	}
 
+	// phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps,PEAR.NamingConventions.ValidFunctionName.PublicUnderscore
 	/**
 	 * Return History
 	 *
 	 * @return	array
 	 */
-	function SmsHistory()
+	public function SmsHistory()
 	{
+		// phpcs:enable
 		global $conf;
 
 		try {
@@ -411,13 +415,15 @@ class OvhSms extends CommonObject
 		return -1;
 	}
 
+	// phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps,PEAR.NamingConventions.ValidFunctionName.PublicUnderscore
 	/**
 	 * Return list of possible SMS senders
 	 *
 	 * @return array|int	                    <0 if KO, array with list of available senders if OK
 	 */
-	function SmsSenderList()
+	public function SmsSenderList()
 	{
+		// phpcs:enable
 		global $conf;
 
 		try {
@@ -457,7 +463,7 @@ class OvhSms extends CommonObject
 	 *
 	 * @return	void
 	 */
-	function soapDebug()
+	public function soapDebug()
 	{
 		if (method_exists($this->soap, '__getLastRequestHeaders')) dol_syslog(get_class($this).'::OvhSms REQUEST HEADER: ' . $this->soap->__getLastRequestHeaders(), LOG_DEBUG, 0, '_ovhsms');
 		if (method_exists($this->soap, '__getLastRequest')) dol_syslog(get_class($this).'::OvhSms REQUEST: ' . $this->soap->__getLastRequest(), LOG_DEBUG, 0, '_ovhsms');
