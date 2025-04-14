@@ -46,7 +46,7 @@ class modGoogle extends DolibarrModules
 		$this->editor_name = 'DoliCloud';
 		$this->editor_url = 'https://www.dolicloud.com?origin=dolimods';
 		// Possible values for version are: 'development', 'experimental', 'dolibarr' or version
-		$this->version = '6.8.1';
+		$this->version = '6.8.2';
 		// Key used in llx_const table to save module status enabled/disabled (where MYMODULE is value of property name of module in uppercase)
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
 		// Name of image file used for this module.
@@ -57,7 +57,9 @@ class modGoogle extends DolibarrModules
 		// Defined if the directory /mymodule/inc/triggers/ contains triggers or not
 		$this->module_parts = array(
 			'triggers' => 1,
-			'hooks' => array('main','agenda','agendalist')
+			'hooks' => array('main','agenda','agendalist','login'),
+			// Set this to 1 if the module provides a captcha driver
+			'captcha' => 1
 		);
 
 		// Data directories to create when module is enabled

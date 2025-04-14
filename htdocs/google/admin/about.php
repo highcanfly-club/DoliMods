@@ -42,7 +42,9 @@ require_once DOL_DOCUMENT_ROOT.'/core/class/html.formother.class.php';
 dol_include_once("/google/lib/google.lib.php");
 
 
-if (!$user->admin) accessforbidden();
+if (!$user->admin) {
+	accessforbidden();
+}
 
 
 $langs->load("admin");
@@ -59,7 +61,6 @@ llxHeader('', '', $help_url);
 
 $linkback='<a href="'.DOL_URL_ROOT.'/admin/modules.php?restore_lastsearch_values=1">'.$langs->trans("BackToModuleList").'</a>';
 print_fiche_titre($langs->trans("GoogleSetup"), $linkback, 'setup');
-print '<br>';
 
 $head=googleadmin_prepare_head();
 
@@ -75,7 +76,7 @@ print $langs->trans("AboutInfo").'<br>';
 
 print $langs->trans("MoreModules").'<br>';
 print '&nbsp; &nbsp; &nbsp; '.$langs->trans("MoreModulesLink").'<br>';
-$url='https://www.dolistore.com/search.php?search_query=nltechno';
+$url='https://www.dolistore.com/search.php?search_query=dolicloud';
 print '<a href="'.$url.'" target="_blank"><img border="0" width="180" src="'.DOL_URL_ROOT.'/theme/dolistore_logo.png"></a><br><br><br>';
 
 print '<br>';

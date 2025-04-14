@@ -69,7 +69,8 @@ class OvhSms extends CommonObject
 	 */
 	public function __construct($db)
 	{
-		global $conf, $langs;
+		global $conf;
+
 		$this->db = $db;
 
 		// Réglages par défaut
@@ -78,10 +79,11 @@ class OvhSms extends CommonObject
 		$this->deferred = '60';   // the time -in minute(s)- to wait before sending the message, default is 0
 		$this->priority = '3';    // the priority of the message (0 to 3), default is 3
 		// Set the WebService URL
-		dol_syslog(get_class($this)."::OvhSms URL=".(! empty($conf->global->OVHSMS_SOAPURL) ? $conf->global->OVHSMS_SOAPURL : '(NULL)'));
 
-		if (! empty($conf->global->OVH_OLDAPI)) {
-			if (! empty($conf->global->OVHSMS_SOAPURL)) {
+		if (getDolGlobalString('OVH_OLDAPI')) {
+			dol_syslog(get_class($this)."::OvhSms OVHSMS_SOAPURL=".getDolGlobalString('OVHSMS_SOAPURL'));
+
+			if (getDolGlobalString('OVHSMS_SOAPURL')) {
 				require_once DOL_DOCUMENT_ROOT.'/core/lib/functions2.lib.php';
 				$params=getSoapParams();
 				ini_set('default_socket_timeout', $params['response_timeout']);
@@ -95,18 +97,18 @@ class OvhSms extends CommonObject
 				error_reporting(E_ALL);     // Enable all errors
 
 				try {
-					$this->soap = new SoapClient($conf->global->OVHSMS_SOAPURL, $params);
+					$this->soap = new SoapClient(getDolGlobalString('OVHSMS_SOAPURL'), $params);
 
 					$language = "en";
 					$multisession = false;
 
-					$this->session = $this->soap->login($conf->global->OVHSMS_NICK, $conf->global->OVHSMS_PASS, $language, $multisession);
+					$this->session = $this->soap->login(getDolGlobalString('OVHSMS_NICK'), getDolGlobalString('OVHSMS_PASS'), $language, $multisession);
 					//if ($this->session) print '<div class="ok">'.$langs->trans("OvhSmsLoginSuccessFull").'</div><br>';
 					//else print '<div class="error">Error login did not return a session id</div><br>';
 					$this->soapDebug();
 
 					// We save known SMS account
-					$this->account = empty($conf->global->OVHSMS_ACCOUNT)?'ErrorNotDefined':$conf->global->OVHSMS_ACCOUNT;
+					$this->account = (getDolGlobalString('OVHSMS_ACCOUNT') ? getDolGlobalString('OVHSMS_ACCOUNT') : 'ErrorNotDefined');
 
 					return 1;
 				} catch (SoapFault $se) {
@@ -130,7 +132,10 @@ class OvhSms extends CommonObject
 				return 1;
 			} else return 0;
 		} else {
-			$endpoint = empty($conf->global->OVH_ENDPOINT)?'ovh-eu':$conf->global->OVH_ENDPOINT;
+			$endpoint = getDolGlobalString('OVH_ENDPOINT', 'ovh-eu');
+
+			dol_syslog(get_class($this)."::OvhSms OVH_ENDPOINT=".$endpoint);
+
 			$this->endpoint = $endpoint;
 
 			require_once DOL_DOCUMENT_ROOT.'/core/lib/functions2.lib.php';
@@ -138,11 +143,12 @@ class OvhSms extends CommonObject
 			ini_set('default_socket_timeout', $params['response_timeout']);
 
 			try {
-				// Get servers list
-				$this->conn = new Api($conf->global->OVHAPPKEY, $conf->global->OVHAPPSECRET, $endpoint, $conf->global->OVHCONSUMERKEY);
+				// Get the factory to call API.
+				// Array of endpoints is defined into ->$endpoints of Api. The $endpoint key will be used to find final URL.
+				$this->conn = new Api(getDolGlobalString('OVHAPPKEY'), getDolGlobalString('OVHAPPSECRET'), $endpoint, getDolGlobalString('OVHCONSUMERKEY'));
 
 				// We save known SMS account
-				$this->account = empty($conf->global->OVHSMS_ACCOUNT)?'ErrorNotDefined':$conf->global->OVHSMS_ACCOUNT;
+				$this->account = (getDolGlobalString('OVHSMS_ACCOUNT') ? getDolGlobalString('OVHSMS_ACCOUNT') : 'ErrorNotDefined');
 			} catch (Exception $e) {
 				$this->error=$e->getMessage();
 				setEventMessages($this->error, null, 'errors');
@@ -160,9 +166,9 @@ class OvhSms extends CommonObject
 	 */
 	public function logout()
 	{
-		global $conf;
-
-		if (! empty($conf->global->OVH_OLDAPI)) $this->soap->logout($this->session);
+		if (getDolGlobalString('OVH_OLDAPI')) {
+			$this->soap->logout($this->session);
+		}
 		return 1;
 	}
 
@@ -179,7 +185,7 @@ class OvhSms extends CommonObject
 		global $db, $conf, $langs, $user;
 
 		try {
-			if (!empty($conf->global->OVH_OLDAPI)) {
+			if (getDolGlobalString('OVH_OLDAPI')) {
 				// print "$this->session, $this->account, $this->expe, $this->dest, $this->message, $this->validity, $this->class, $this->deferred, $this->priority";
 				$resultsend = $this->soap->telephonySmsSend($this->session, $this->account, $this->expe, $this->dest, $this->message, $this->validity, $this->class, $this->deferred, $this->priority, 2, 'Dolibarr');
 				$this->soapDebug();
@@ -213,7 +219,9 @@ class OvhSms extends CommonObject
 				//var_dump($content);exit;
 				try {
 					//var_dump($content);
-					$resultPostJob = $this->conn->post('/sms/'. $this->account . '/jobs/', $content);
+					$relurl = '/sms/'. $this->account . '/jobs/';
+
+					$resultPostJob = $this->conn->post($relurl, $content);
 					/* Example of result:
 					$resultPostJob = array(
 						[totalCreditsRemoved] => 1
@@ -228,17 +236,17 @@ class OvhSms extends CommonObject
 					//var_dump($resultPostJob);
 					if ($resultPostJob['totalCreditsRemoved'] > 0) {
 						$object = new stdClass();
-						$trigger_name = 'SENTBYSMS';
+						$triggersendname = 'SENTBYSMS';
 						if ($this->member_id > 0) {
-							$trigger_name = 'MEMBER_SENTBYSMS';
+							$triggersendname = 'MEMBER_SENTBYSMS';
 							//$conf->global->MAIN_AGENDA_ACTIONAUTO_MEMBER_SENTBYSMS should be set from agenda setup
 						} elseif ($this->socid > 0) {
-							$trigger_name = 'COMPANY_SENTBYSMS';
+							$triggersendname = 'COMPANY_SENTBYSMS';
 							//$conf->global->MAIN_AGENDA_ACTIONAUTO_COMPANY_SENTBYSMS should be set from agenda setup
 						}
 
 						// Force automatic event to ON for the generic trigger name
-						if (! isset($conf->global->MAIN_AGENDA_ACTIONAUTO_SENTBYSMS)) {
+						if (!isset($conf->global->MAIN_AGENDA_ACTIONAUTO_SENTBYSMS)) {
 							$conf->global->MAIN_AGENDA_ACTIONAUTO_SENTBYSMS = 1;	// Make trigger on
 						}
 
@@ -263,10 +271,10 @@ class OvhSms extends CommonObject
 							//$object->attachedfiles	= null;
 
 							// Call of triggers
-							if (! empty($trigger_name)) {
+							if (! empty($triggersendname)) {
 								include_once DOL_DOCUMENT_ROOT . '/core/class/interfaces.class.php';
 								$interface=new Interfaces($db);
-								$result=$interface->run_triggers($trigger_name, $object, $user, $langs, $conf);
+								$result=$interface->run_triggers($triggersendname, $object, $user, $langs, $conf);
 								if ($result < 0) {
 									setEventMessages($interface->error, $interface->errors, 'errors');
 								}
@@ -320,10 +328,8 @@ class OvhSms extends CommonObject
 	 */
 	public function getSmsListAccount()
 	{
-		global $conf;
-
 		try {
-			if (! empty($conf->global->OVH_OLDAPI)) {
+			if (getDolGlobalString('OVH_OLDAPI')) {
 				$returnList = $this->soap->telephonySmsAccountList($this->session);
 				$this->soapDebug();
 				return $returnList;
@@ -354,10 +360,8 @@ class OvhSms extends CommonObject
 	public function CreditLeft()
 	{
 		// phpcs:enable
-		global $conf;
-
 		try {
-			if (! empty($conf->global->OVH_OLDAPI)) {
+			if (getDolGlobalString('OVH_OLDAPI')) {
 				$returnList = $this->soap->telephonySmsCreditLeft($this->session, $this->account);
 				$this->soapDebug();
 				return $returnList;
@@ -389,10 +393,8 @@ class OvhSms extends CommonObject
 	public function SmsHistory()
 	{
 		// phpcs:enable
-		global $conf;
-
 		try {
-			if (! empty($conf->global->OVH_OLDAPI)) {
+			if (getDolGlobalString('OVH_OLDAPI')) {
 				$returnList = $this->soap->telephonySmsHistory($this->session, $this->account, "");
 				$this->soapDebug();
 				return $returnList;
@@ -424,10 +426,8 @@ class OvhSms extends CommonObject
 	public function SmsSenderList()
 	{
 		// phpcs:enable
-		global $conf;
-
 		try {
-			if (! empty($conf->global->OVH_OLDAPI)) {
+			if (getDolGlobalString('OVH_OLDAPI')) {
 				$telephonySmsSenderList = $this->soap->telephonySmsSenderList($this->session, $this->account);
 				$this->soapDebug();
 				return $telephonySmsSenderList;
@@ -436,9 +436,9 @@ class OvhSms extends CommonObject
 				//var_dump($resultinfo);
 				$i=0;
 				$senderlist=array();
-				foreach ($resultinfo as $key => $val) {
+				foreach ($resultinfo as $val) {
 					$senderlist[$i] = new stdClass();
-					$senderlist[$i]->number=$val;
+					$senderlist[$i]->number = $val;
 					$i++;
 				}
 				return $senderlist;
